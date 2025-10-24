@@ -168,6 +168,21 @@ const AddCategory = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/categories/${id}`);
+      message.success("Category soft deleted successfully");
+      fetchCategories();
+      fetchTrashedCategories();
+      setSelectedCategory(null);
+      setSelectedParent(null);
+      form.resetFields();
+      setImagePreview(null);
+    } catch (err) {
+      message.error(err.response?.data?.message || "Failed to delete category");
+    }
+  };
+
   const handleRestore = async (id) => {
     try {
       await axios.post(`http://localhost:5000/api/categories/${id}/restore`);
@@ -180,22 +195,26 @@ const AddCategory = () => {
   };
 
   const trashedColumns = [
-    { title: "Name", key: "name", sortable: true },
-    { title: "Slug", key: "slug" },
-    { title: "Status", key: "status" },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Button onClick={() => handleRestore(record._id)} type="primary">
-          Restore
-        </Button>
-      ),
-    },
-  ];
-
+  {
+    title: "S.No",
+    key: "sno",
+    render: (_, __, index) => index + 1, // Ensure index is properly received
+  },
+  { title: "Name", key: "name", sortable: true },
+  { title: "Slug", key: "slug" },
+  { title: "Status", key: "status", render: () => "Inactive" },
+  {
+    title: "Actions",
+    key: "actions",
+    render: (_, record) => (
+      <Button onClick={() => handleRestore(record._id)} type="primary">
+        Restore
+      </Button>
+    ),
+  },
+];
   return (
-    <Row gutter={16} style={{ padding: 20 }}>
+    <Row gutter={16} >
       {/* LEFT: Category Tree */}
       <Col span={8}>
         <Card
@@ -250,6 +269,15 @@ const AddCategory = () => {
                   }}
                 >
                   Add Child
+                </Button>
+              )}
+              {selectedCategory && (
+                <Button
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleDelete(selectedCategory._id)}
+                >
+                  Delete
                 </Button>
               )}
               <Button
@@ -391,17 +419,19 @@ const AddCategory = () => {
 
         {/* Trashed Categories Table */}
         <Card title="Trashed Categories" style={{ marginTop: 20 }}>
-          <CustomTable
-            columns={trashedColumns}
-            data={trashedCategories}
-            totalItems={trashedCategories.length}
-            currentPage={1}
-            itemsPerPage={10}
-            onPageChange={(page) => {}}
-            onFilter={() => {}}
-            loading={trashedLoading}
-          />
+        <CustomTable
+  columns={trashedColumns}
+  data={trashedCategories.map((item, index) => ({ ...item, key: item._id || index }))}
+  totalItems={trashedCategories.length}
+  currentPage={1}
+  itemsPerPage={10}
+  onPageChange={(page) => {}}
+  onFilter={() => {}}
+  loading={trashedLoading}
+/>
         </Card>
+      </Col>
+      <Col>
       </Col>
     </Row>
   );
