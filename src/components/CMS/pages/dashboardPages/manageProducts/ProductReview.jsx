@@ -487,7 +487,7 @@ const ProductReview = () => {
                               </div>
                             }
                           />
-                          {user.is_superadmin &&
+                          {
                             !img.verified &&
                             product.verification_status.status === 'pending' && (
                               <Space style={{ marginTop: 8 }}>
@@ -656,7 +656,7 @@ const ProductReview = () => {
                               </div>
                             }
                           />
-                          {user.is_superadmin &&
+                          {
                             !doc.verified &&
                             product.verification_status.status === 'pending' && (
                               <Space style={{ marginTop: 8 }}>

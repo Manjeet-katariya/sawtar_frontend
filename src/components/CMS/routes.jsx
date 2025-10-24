@@ -49,6 +49,7 @@ import Inventory from '../ecommerce/B2C/products/Inventory';
 import ManageWareHouses from '../ecommerce/setting/ManageWareHouses';
 import Currency from './pages/settings/Currency';
 import Tax from './pages/settings/Tax';
+import AllVendorProductB2C from './pages/dashboardPages/manageProducts/AllVendorProductB2C';
 // Assuming you have or will create a VendorDashboard component (or reuse Customerdashboard for now)
 
 const CmsRoutes = () => {
@@ -259,6 +260,30 @@ const CmsRoutes = () => {
         element={
           <PrivateRoute allowedRoles={['0','1']}>
             <AddCategory /> {/* Create VendorDashboard or replace with Customerdashboard */}
+          </PrivateRoute>
+        }
+      />
+         <Route
+        path="/admin/brands"
+        element={
+          <PrivateRoute allowedRoles={['0','1']}>
+            <AddBrand /> {/* Create VendorDashboard or replace with Customerdashboard */}
+          </PrivateRoute>
+        }
+      />
+         <Route
+        path="/admin/materials"
+        element={
+          <PrivateRoute allowedRoles={['0','1']}>
+            <AddMaterial /> {/* Create VendorDashboard or replace with Customerdashboard */}
+          </PrivateRoute>
+        }
+      />
+         <Route
+        path="/admin/product/seller"
+        element={
+          <PrivateRoute allowedRoles={['0','1']}>
+            <AllVendorProductB2C /> {/* Create VendorDashboard or replace with Customerdashboard */}
           </PrivateRoute>
         }
       />

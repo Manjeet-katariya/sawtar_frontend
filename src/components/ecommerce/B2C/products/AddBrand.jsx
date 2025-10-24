@@ -1,11 +1,19 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { FiRefreshCw, FiEye, FiEdit, FiTrash2 } from 'react-icons/fi';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { FiRefreshCw, FiEye, FiEdit, FiTrash2, FiRotateCcw } from 'react-icons/fi';
 import { format } from 'date-fns';
+import { Button, Input, Upload, Modal, message } from 'antd';
+import { UploadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import CustomTable from '../../../CMS/pages/custom/CustomTable';
 import { apiService } from '../../../../manageApi/utils/custom.apiservice';
 import { showSuccessAlert, showErrorAlert, showConfirmDialog } from '../../../../manageApi/utils/sweetAlert';
+import { useNavigate } from 'react-router-dom';
+
+const { TextArea } = Input;
 
 const AddBrand = () => {
+  const navigate = useNavigate();
+
   // Form state for adding brands
   const [form, setForm] = useState({
     name: '',
@@ -16,10 +24,11 @@ const AddBrand = () => {
   });
   const [errors, setErrors] = useState({});
   const [isLoadingForm, setIsLoadingForm] = useState(false);
-  const fileInputRef = useRef(null);
+  const [logoPreview, setLogoPreview] = useState(null);
 
   // Table state for listing brands
   const [brands, setBrands] = useState([]);
+  const [trashedBrands, setTrashedBrands] = useState([]);
   const [loadingTable, setLoadingTable] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [pagination, setPagination] = useState({
@@ -30,8 +39,10 @@ const AddBrand = () => {
   });
   const [filters, setFilters] = useState({
     search: '',
+    status: 1, // Default to active brands
   });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [activeTab, setActiveTab] = useState('active');
 
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
@@ -45,7 +56,7 @@ const AddBrand = () => {
     logo: null,
   });
   const [editErrors, setEditErrors] = useState({});
-  const editFileInputRef = useRef(null);
+  const [editLogoPreview, setEditLogoPreview] = useState(null);
 
   // Fetch brands
   const fetchBrands = useCallback(
@@ -55,12 +66,19 @@ const AddBrand = () => {
         const params = {
           page,
           limit: itemsPerPage,
+          status: filters.status,
         };
         if (filters.search) params.search = filters.search;
 
-        const response = await apiService.get('/brands', { params });
+        const response = await apiService.get('/brands',  params );
 
-        setBrands(response.brands || []);
+        if (filters.status === 0) {
+          setTrashedBrands(response.brands || []);
+          setBrands([]);
+        } else {
+          setBrands(response.brands || []);
+          setTrashedBrands([]);
+        }
         setPagination({
           currentPage: response.pagination?.page || 1,
           totalPages: Math.ceil(response.pagination?.total / response.pagination?.limit) || 1,
@@ -69,7 +87,11 @@ const AddBrand = () => {
         });
       } catch (error) {
         showErrorAlert('Error', error.response?.data?.message || 'Failed to fetch brands');
-        setBrands([]);
+        if (filters.status === 0) {
+          setTrashedBrands([]);
+        } else {
+          setBrands([]);
+        }
       } finally {
         setLoadingTable(false);
       }
@@ -78,51 +100,15 @@ const AddBrand = () => {
   );
 
   // Handle input changes for add form
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    if (name === 'logo') {
-      const file = files[0];
-      if (file) {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
-        const maxSize = 2 * 1024 * 1024; // 2MB
-        if (!allowedTypes.includes(file.type)) {
-          setErrors((prev) => ({ ...prev, logo: 'Logo must be an image (JPEG, PNG, JPG, GIF)' }));
-          return;
-        }
-        if (file.size > maxSize) {
-          setErrors((prev) => ({ ...prev, logo: 'Logo size must be less than 2MB' }));
-          return;
-        }
-      }
-      setForm((prev) => ({ ...prev, logo: file || null }));
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
-    }
-    setErrors((prev) => ({ ...prev, [name]: '' }));
+  const handleChange = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
   // Handle input changes for edit form
-  const handleEditChange = (e) => {
-    const { name, value, files } = e.target;
-    if (name === 'logo') {
-      const file = files[0];
-      if (file) {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
-        const maxSize = 2 * 1024 * 1024; // 2MB
-        if (!allowedTypes.includes(file.type)) {
-          setEditErrors((prev) => ({ ...prev, logo: 'Logo must be an image (JPEG, PNG, JPG, GIF)' }));
-          return;
-        }
-        if (file.size > maxSize) {
-          setEditErrors((prev) => ({ ...prev, logo: 'Logo size must be less than 2MB' }));
-          return;
-        }
-      }
-      setEditForm((prev) => ({ ...prev, logo: file || null }));
-    } else {
-      setEditForm((prev) => ({ ...prev, [name]: value }));
-    }
-    setEditErrors((prev) => ({ ...prev, [name]: '' }));
+  const handleEditChange = (field, value) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+    setEditErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
   // Validate add form
@@ -176,13 +162,13 @@ const AddBrand = () => {
       await apiService.upload('/brands', formData);
       showSuccessAlert('Success', 'Brand created successfully');
       setForm({ name: '', description: '', website: '', country: '', logo: null });
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setLogoPreview(null);
       setErrors({});
       setRefreshTrigger((prev) => prev + 1);
     } catch (error) {
       const errorData = error.response?.data;
       if (errorData?.errors) {
-        setErrors(errorData.errors);
+        setErrors(errorData.errors.reduce((acc, err) => ({ ...acc, [err.field]: err.message }), {}));
       } else {
         setErrors({ general: errorData?.message || 'Failed to create brand' });
         showErrorAlert('Error', errorData?.message || 'Failed to create brand');
@@ -213,19 +199,58 @@ const AddBrand = () => {
       });
       showSuccessAlert('Success', 'Brand updated successfully');
       setShowEditModal(false);
-      if (editFileInputRef.current) editFileInputRef.current.value = '';
+      setEditLogoPreview(null);
       setEditErrors({});
       setRefreshTrigger((prev) => prev + 1);
     } catch (error) {
       const errorData = error.response?.data;
       if (errorData?.errors) {
-        setEditErrors(errorData.errors);
+        setEditErrors(errorData.errors.reduce((acc, err) => ({ ...acc, [err.field]: err.message }), {}));
       } else {
         setEditErrors({ general: errorData?.message || 'Failed to update brand' });
         showErrorAlert('Error', errorData?.message || 'Failed to update brand');
       }
     } finally {
       setIsLoadingForm(false);
+    }
+  };
+
+  // Handle soft delete
+  const handleSoftDelete = async (brandId) => {
+    const result = await showConfirmDialog(
+      'Are you sure?',
+      'This brand will be moved to the trash. You can restore it later.',
+      'Yes, move to trash!'
+    );
+    if (result.isConfirmed) {
+      setIsDeleting(true);
+      try {
+        await apiService.delete(`/brands/${brandId}`);
+        showSuccessAlert('Moved to Trash', 'Brand has been moved to the trash.');
+        fetchBrands(pagination.currentPage, pagination.itemsPerPage, filters);
+      } catch (error) {
+        showErrorAlert('Error', error.response?.data?.message || 'Failed to move brand to trash');
+      } finally {
+        setIsDeleting(false);
+      }
+    }
+  };
+
+  // Handle restore
+  const handleRestore = async (brandId) => {
+    const result = await showConfirmDialog(
+      'Restore Brand?',
+      'This will restore the brand to active status.',
+      'Yes, restore it!'
+    );
+    if (result.isConfirmed) {
+      try {
+        await apiService.post(`/brands/${brandId}/restore`);
+        showSuccessAlert('Restored', 'Brand has been restored successfully.');
+        fetchBrands(pagination.currentPage, pagination.itemsPerPage, filters);
+      } catch (error) {
+        showErrorAlert('Error', error.response?.data?.message || 'Failed to restore brand');
+      }
     }
   };
 
@@ -245,27 +270,6 @@ const AddBrand = () => {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  // Handle delete brand
-  const handleDelete = async (brandId) => {
-    const result = await showConfirmDialog(
-      'Are you sure?',
-      "You won't be able to revert this!",
-      'Yes, delete it!'
-    );
-    if (result.isConfirmed) {
-      setIsDeleting(true);
-      try {
-        await apiService.delete(`/brands/${brandId}`);
-        showSuccessAlert('Deleted!', 'Your brand has been deleted.');
-        fetchBrands(pagination.currentPage, pagination.itemsPerPage, filters);
-      } catch (error) {
-        showErrorAlert('Error', error.response?.data?.message || 'Failed to delete brand');
-      } finally {
-        setIsDeleting(false);
-      }
-    }
-  };
-
   // Open view modal
   const openViewModal = (item) => {
     setSelectedBrand(item);
@@ -282,13 +286,33 @@ const AddBrand = () => {
       country: item.country || '',
       logo: null,
     });
+    setEditLogoPreview(null);
     setShowEditModal(true);
   };
 
   // Fetch data when refreshTrigger changes
   useEffect(() => {
     fetchBrands(pagination.currentPage, pagination.itemsPerPage, filters);
-  }, [refreshTrigger, fetchBrands, pagination.currentPage, pagination.itemsPerPage, filters]);
+  }, [refreshTrigger, fetchBrands, filters]);
+
+  // Clean up URL object for logo preview
+  useEffect(() => {
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+      if (editLogoPreview) URL.revokeObjectURL(editLogoPreview);
+    };
+  }, [logoPreview, editLogoPreview]);
+
+  // Handle tab change
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setFilters((prev) => ({
+      ...prev,
+      status: tab === 'active' ? 1 : 0,
+    }));
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+    setRefreshTrigger((prev) => prev + 1);
+  };
 
   // Render error messages
   const renderError = (field, errorsObj) => {
@@ -297,9 +321,83 @@ const AddBrand = () => {
     ) : null;
   };
 
+  // Ant Design Upload props for add form
+  const uploadProps = {
+    beforeUpload: (file) => {
+      const isImage = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'].includes(file.type);
+      const isLt2M = file.size / 1024 / 1024 < 2;
+      if (!isImage) {
+        message.error('Logo must be an image (JPEG, PNG, JPG, GIF)');
+        setErrors((prev) => ({ ...prev, logo: 'Logo must be an image (JPEG, PNG, JPG, GIF)' }));
+        return false;
+      }
+      if (!isLt2M) {
+        message.error('Logo size must be less than 2MB');
+        setErrors((prev) => ({ ...prev, logo: 'Logo size must be less than 2MB' }));
+        return false;
+      }
+      setForm((prev) => ({ ...prev, logo: file }));
+      setLogoPreview(URL.createObjectURL(file));
+      setErrors((prev) => ({ ...prev, logo: '' }));
+      return false; // Prevent automatic upload
+    },
+    fileList: form.logo ? [{ uid: '-1', name: form.logo.name, status: 'done', url: logoPreview }] : [],
+    onRemove: () => {
+      setForm((prev) => ({ ...prev, logo: null }));
+      setLogoPreview(null);
+    },
+    listType: 'picture',
+    maxCount: 1,
+  };
+
+  // Ant Design Upload props for edit form
+  const editUploadProps = {
+    beforeUpload: (file) => {
+      const isImage = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'].includes(file.type);
+      const isLt2M = file.size / 1024 / 1024 < 2;
+      if (!isImage) {
+        message.error('Logo must be an image (JPEG, PNG, JPG, GIF)');
+        setEditErrors((prev) => ({ ...prev, logo: 'Logo must be an image (JPEG, PNG, JPG, GIF)' }));
+        return false;
+      }
+      if (!isLt2M) {
+        message.error('Logo size must be less than 2MB');
+        setEditErrors((prev) => ({ ...prev, logo: 'Logo size must be less than 2MB' }));
+        return false;
+      }
+      setEditForm((prev) => ({ ...prev, logo: file }));
+      setEditLogoPreview(URL.createObjectURL(file));
+      setEditErrors((prev) => ({ ...prev, logo: '' }));
+      return false; // Prevent automatic upload
+    },
+    fileList: editForm.logo ? [{ uid: '-1', name: editForm.logo.name, status: 'done', url: editLogoPreview }] : [],
+    onRemove: () => {
+      setEditForm((prev) => ({ ...prev, logo: null }));
+      setEditLogoPreview(null);
+    },
+    listType: 'picture',
+    maxCount: 1,
+  };
+
   // Table columns for brands
   const brandColumns = useMemo(
     () => [
+    
+      {
+        key: 'logo',
+        title: 'Logo',
+        sortable: false,
+        render: (value) =>
+          value ? (
+            <img
+              src={`http://localhost:5000/${value}`}
+              alt="Brand Logo"
+              className="w-12 h-12 object-contain"
+            />
+          ) : (
+            '--'
+          ),
+      },
       {
         key: 'name',
         title: 'Brand Name',
@@ -333,20 +431,6 @@ const AddBrand = () => {
         render: (value) => <span className="text-gray-900">{value || '--'}</span>,
       },
       {
-        key: 'logo',
-        title: 'Logo',
-        sortable: false,
-        render: (value) =>
-          value ? (
-<img
-      src={`http://localhost:5000/${value}`}
-      alt="Category Image"
-      className="w-12 h-12 object-contain"
-    />          ) : (
-            '--'
-          ),
-      },
-      {
         key: 'created_at',
         title: 'Created At',
         sortable: true,
@@ -361,221 +445,189 @@ const AddBrand = () => {
         title: 'Actions',
         render: (value, item) => (
           <div className="flex space-x-2">
-            <button
+            <Button
+              icon={<FiEye />}
               onClick={() => openViewModal(item)}
-              className="text-blue-600 hover:text-blue-800 p-1 rounded"
+              type="link"
+              className="text-blue-600 hover:text-blue-800"
               title="View Details"
-              aria-label="View Brand Details"
-            >
-              <FiEye className="text-lg" />
-            </button>
-            <button
-              onClick={() => openEditModal(item)}
-              className="text-blue-600 hover:text-blue-800 p-1 rounded"
-              title="Edit Brand"
-              aria-label="Edit Brand"
-            >
-              <FiEdit className="text-lg" />
-            </button>
-            <button
-              onClick={() => handleDelete(item._id)}
-              className={`text-red-600 hover:text-red-800 p-1 rounded ${
-                isDeleting ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
-              title="Delete Brand"
-              aria-label="Delete Brand"
-              disabled={isDeleting}
-            >
-              <FiTrash2 className="text-lg" />
-            </button>
+            />
+            {activeTab === 'active' && (
+              <>
+                <Button
+                  icon={<FiEdit />}
+                  onClick={() => openEditModal(item)}
+                  type="link"
+                  className="text-blue-600 hover:text-blue-800"
+                  title="Edit Brand"
+                />
+                <Button
+                  icon={<FiTrash2 />}
+                  onClick={() => handleSoftDelete(item._id)}
+                  type="link"
+                  className={`text-red-600 hover:text-red-800 ${isDeleting ? 'opacity-75 cursor-not-allowed' : ''}`}
+                  title="Move to Trash"
+                  disabled={isDeleting}
+                />
+              </>
+            )}
+            {activeTab === 'trashed' && (
+              <Button
+                icon={<FiRotateCcw />}
+                onClick={() => handleRestore(item._id)}
+                type="link"
+                className="text-green-600 hover:text-green-800"
+                title="Restore Brand"
+              />
+            )}
           </div>
         ),
       },
     ],
-    [isDeleting]
+    [isDeleting, activeTab]
   );
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-semibold text-gray-800 mb-6">Brands Management</h1>
+    <div className="min-h-screen">
+      <div className="flex items-center mb-6">
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(-1)}
+          className="mr-4"
+          type="primary"
+          shape="circle"
+        />
+        <h1 className="text-3xl font-bold text-gray-800">Brands Management</h1>
+      </div>
 
       {/* Add Brand Form */}
-      <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-6">
+      <div className="bg-white shadow-lg rounded-lg px-8 pt-6 pb-8 mb-6">
         <h2 className="text-xl font-semibold mb-4 text-gray-800">Add New Brand</h2>
         <form onSubmit={handleSubmit}>
           {errors.general && (
             <p className="text-red-500 text-xs italic mb-4">{errors.general}</p>
           )}
           <div className="mb-6">
-            <label
-              className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-              htmlFor="name"
-            >
+            <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
               Brand Name *
             </label>
-            <input
-              className={`appearance-none block w-full bg-gray-200 text-gray-700 border ${
-                errors.name ? 'border-red-500' : 'border-gray-200'
-              } rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500`}
-              id="name"
-              name="name"
-              type="text"
+            <Input
+              size="large"
               value={form.name}
-              onChange={handleChange}
+              onChange={(e) => handleChange('name', e.target.value)}
               placeholder="e.g. Nike"
+              status={errors.name ? 'error' : ''}
             />
             {renderError('name', errors)}
           </div>
 
           <div className="mb-6">
-            <label
-              className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-              htmlFor="description"
-            >
+            <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
               Description
             </label>
-            <textarea
-              className={`appearance-none block w-full bg-gray-200 text-gray-700 border ${
-                errors.description ? 'border-red-500' : 'border-gray-200'
-              } rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500`}
-              id="description"
-              name="description"
+            <TextArea
+              size="large"
               value={form.description}
-              onChange={handleChange}
+              onChange={(e) => handleChange('description', e.target.value)}
               placeholder="e.g. Leading sportswear brand"
+              rows={4}
+              status={errors.description ? 'error' : ''}
             />
             {renderError('description', errors)}
           </div>
 
           <div className="mb-6">
-            <label
-              className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-              htmlFor="website"
-            >
+            <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
               Website
             </label>
-            <input
-              className={`appearance-none block w-full bg-gray-200 text-gray-700 border ${
-                errors.website ? 'border-red-500' : 'border-gray-200'
-              } rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500`}
-              id="website"
-              name="website"
-              type="text"
+            <Input
+              size="large"
               value={form.website}
-              onChange={handleChange}
+              onChange={(e) => handleChange('website', e.target.value)}
               placeholder="e.g. https://www.nike.com"
+              status={errors.website ? 'error' : ''}
             />
             {renderError('website', errors)}
           </div>
 
           <div className="mb-6">
-            <label
-              className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-              htmlFor="country"
-            >
+            <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
               Country
             </label>
-            <input
-              className={`appearance-none block w-full bg-gray-200 text-gray-700 border ${
-                errors.country ? 'border-red-500' : 'border-gray-200'
-              } rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500`}
-              id="country"
-              name="country"
-              type="text"
+            <Input
+              size="large"
               value={form.country}
-              onChange={handleChange}
+              onChange={(e) => handleChange('country', e.target.value)}
               placeholder="e.g. USA"
+              status={errors.country ? 'error' : ''}
             />
             {renderError('country', errors)}
           </div>
 
           <div className="mb-6">
-            <label
-              className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-              htmlFor="logo"
-            >
+            <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
               Logo
             </label>
-            <input
-              className={`appearance-none block w-full bg-gray-200 text-gray-700 border ${
-                errors.logo ? 'border-red-500' : 'border-gray-200'
-              } rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500`}
-              id="logo"
-              name="logo"
-              type="file"
-              accept="image/jpeg,image/png,image/jpg,image/gif"
-              onChange={handleChange}
-              ref={fileInputRef}
-            />
+            <Upload {...uploadProps}>
+              <Button icon={<UploadOutlined />}>Upload Logo (JPEG, PNG, JPG, GIF, max 2MB)</Button>
+            </Upload>
             {renderError('logo', errors)}
           </div>
 
           <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
-                isLoadingForm ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
+            <Button
+              type="primary"
+              htmlType="submit"
+              size="large"
+              loading={isLoadingForm}
               disabled={isLoadingForm}
             >
-              {isLoadingForm ? (
-                <span className="flex items-center justify-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Creating...
-                </span>
-              ) : (
-                'Create Brand'
-              )}
-            </button>
+              {isLoadingForm ? 'Creating...' : 'Create Brand'}
+            </Button>
           </div>
         </form>
       </div>
 
-      {/* Brands List */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">Brands List</h2>
-        <button
-          onClick={handleRefresh}
-          className="flex items-center gap-1 text-gray-600 hover:text-gray-800 p-2 rounded-full hover:bg-gray-200"
-          title="Refresh data"
-          aria-label="Refresh brands list"
-        >
-          <FiRefreshCw className={`text-lg ${loadingTable ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
-
-      {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-sm font-medium text-gray-500">Total Brands</div>
-          <div className="text-2xl font-bold text-gray-900">{pagination.totalResults}</div>
+      {/* Tabs */}
+      <div className="mb-6">
+        <div className="flex border-b">
+          <button
+            className={`px-4 py-2 font-semibold text-sm text-gray-700 border-b-2 ${
+              activeTab === 'active' ? 'border-blue-600 text-blue-600' : 'border-transparent'
+            }`}
+            onClick={() => handleTabChange('active')}
+          >
+            Active Brands
+          </button>
+          <button
+            className={`px-4 py-2 font-semibold text-sm text-gray-700 border-b-2 ${
+              activeTab === 'trashed' ? 'border-blue-600 text-blue-600' : 'border-transparent'
+            }`}
+            onClick={() => handleTabChange('trashed')}
+          >
+            Trashed Brands
+          </button>
         </div>
       </div>
 
+      {/* Brands List */}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">
+          {activeTab === 'active' ? 'Active Brands' : 'Trashed Brands'}
+        </h2>
+       
+      </div>
+
+      {/* Stats Summary */}
+  
       {/* Table */}
       <div className="bg-white rounded-lg shadow">
         <CustomTable
           columns={brandColumns}
-          data={brands}
+          data={(activeTab === 'active' ? brands : trashedBrands).map((item, index) => ({
+            ...item,
+            key: item._id || index,
+          }))}
           totalItems={pagination.totalResults}
           currentPage={pagination.currentPage}
           itemsPerPage={pagination.itemsPerPage}
@@ -589,22 +641,23 @@ const AddBrand = () => {
               placeholder: 'Search by brand name...',
             },
           ]}
-          emptyMessage="No brands found."
+          emptyMessage={activeTab === 'active' ? 'No active brands found.' : 'No trashed brands found.'}
         />
       </div>
 
       {/* View Modal */}
-      {showViewModal && selectedBrand && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-50 bg-black/60"
-          role="dialog"
-          aria-labelledby="view-modal-title"
-          aria-modal="true"
-        >
-          <div className="bg-white rounded-lg p-8 max-w-md w-full">
-            <h2 id="view-modal-title" className="text-xl font-semibold mb-4">
-              Brand Details
-            </h2>
+      <Modal
+        title="Brand Details"
+        open={showViewModal}
+        onCancel={() => setShowViewModal(false)}
+        footer={[
+          <Button key="close" onClick={() => setShowViewModal(false)}>
+            Close
+          </Button>,
+        ]}
+      >
+        {selectedBrand && (
+          <>
             <div className="mb-4">
               <label className="block text-gray-700 font-bold">Name:</label>
               <p>{selectedBrand.name}</p>
@@ -636,10 +689,12 @@ const AddBrand = () => {
             </div>
             <div className="mb-4">
               <label className="block text-gray-700 font-bold">Logo:</label>
-          
               {selectedBrand.logo ? (
-                <img       src={`http://localhost:5000/${selectedBrand.logo}`}
- alt="Brand Logo" className="w-24 h-24 object-contain" />
+                <img
+                  src={`http://localhost:5000/${selectedBrand.logo}`}
+                  alt="Brand Logo"
+                  className="w-24 h-24 object-contain"
+                />
               ) : (
                 <p>--</p>
               )}
@@ -652,191 +707,120 @@ const AddBrand = () => {
                   : '--'}
               </p>
             </div>
-            <button
-              onClick={() => setShowViewModal(false)}
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-              autoFocus
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+            {selectedBrand.status === 0 && (
+              <div className="mb-4">
+                <label className="block text-gray-700 font-bold">Deleted At:</label>
+                <p>
+                  {selectedBrand.deletedAt
+                    ? format(new Date(selectedBrand.deletedAt), 'dd/MM/yyyy')
+                    : '--'}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </Modal>
 
       {/* Edit Modal */}
-      {showEditModal && selectedBrand && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-50 bg-black/60"
-          role="dialog"
-          aria-labelledby="edit-modal-title"
-          aria-modal="true"
-        >
-          <div className="bg-white rounded-lg p-8 max-w-md w-full overflow-y-auto max-h-96">
-            <h2 id="edit-modal-title" className="text-xl font-semibold mb-4">
-              Edit Brand
-            </h2>
-            <form onSubmit={handleEditSubmit}>
-              {editErrors.general && (
-                <p className="text-red-500 text-xs italic mb-4">{editErrors.general}</p>
+      <Modal
+        title="Edit Brand"
+        open={showEditModal}
+        onCancel={() => setShowEditModal(false)}
+        footer={null}
+      >
+        {selectedBrand && (
+          <form onSubmit={handleEditSubmit}>
+            {editErrors.general && (
+              <p className="text-red-500 text-xs italic mb-4">{editErrors.general}</p>
+            )}
+            <div className="mb-6">
+              <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
+                Brand Name *
+              </label>
+              <Input
+                size="large"
+                value={editForm.name}
+                onChange={(e) => handleEditChange('name', e.target.value)}
+                placeholder="e.g. Nike"
+                status={editErrors.name ? 'error' : ''}
+              />
+              {renderError('name', editErrors)}
+            </div>
+
+            <div className="mb-6">
+              <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
+                Description
+              </label>
+              <TextArea
+                size="large"
+                value={editForm.description}
+                onChange={(e) => handleEditChange('description', e.target.value)}
+                placeholder="e.g. Leading sportswear brand"
+                rows={4}
+                status={editErrors.description ? 'error' : ''}
+              />
+              {renderError('description', editErrors)}
+            </div>
+
+            <div className="mb-6">
+              <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
+                Website
+              </label>
+              <Input
+                size="large"
+                value={editForm.website}
+                onChange={(e) => handleEditChange('website', e.target.value)}
+                placeholder="e.g. https://www.nike.com"
+                status={editErrors.website ? 'error' : ''}
+              />
+              {renderError('website', editErrors)}
+            </div>
+
+            <div className="mb-6">
+              <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
+                Country
+              </label>
+              <Input
+                size="large"
+                value={editForm.country}
+                onChange={(e) => handleEditChange('country', e.target.value)}
+                placeholder="e.g. USA"
+                status={editErrors.country ? 'error' : ''}
+              />
+              {renderError('country', editErrors)}
+            </div>
+
+            <div className="mb-6">
+              <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
+                Logo
+              </label>
+              <Upload {...editUploadProps}>
+                <Button icon={<UploadOutlined />}>Upload Logo (JPEG, PNG, JPG, GIF, max 2MB)</Button>
+              </Upload>
+              {selectedBrand.logo && !editForm.logo && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-600">Current Logo:</p>
+                  <img
+                    src={`http://localhost:5000/${selectedBrand.logo}`}
+                    alt="Brand Logo"
+                    className="w-24 h-24 object-contain"
+                  />
+                </div>
               )}
-              <div className="mb-6">
-                <label
-                  className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                  htmlFor="edit-name"
-                >
-                  Brand Name *
-                </label>
-                <input
-                  className={`appearance-none block w-full bg-gray-200 text-gray-700 border ${
-                    editErrors.name ? 'border-red-500' : 'border-gray-200'
-                  } rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500`}
-                  id="edit-name"
-                  name="name"
-                  type="text"
-                  value={editForm.name}
-                  onChange={handleEditChange}
-                  placeholder="e.g. Nike"
-                />
-                {renderError('name', editErrors)}
-              </div>
+              {renderError('logo', editErrors)}
+            </div>
 
-              <div className="mb-6">
-                <label
-                  className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                  htmlFor="edit-description"
-                >
-                  Description
-                </label>
-                <textarea
-                  className={`appearance-none block w-full bg-gray-200 text-gray-700 border ${
-                    editErrors.description ? 'border-red-500' : 'border-gray-200'
-                  } rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500`}
-                  id="edit-description"
-                  name="description"
-                  value={editForm.description}
-                  onChange={handleEditChange}
-                  placeholder="e.g. Leading sportswear brand"
-                />
-                {renderError('description', editErrors)}
-              </div>
-
-              <div className="mb-6">
-                <label
-                  className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                  htmlFor="edit-website"
-                >
-                  Website
-                </label>
-                <input
-                  className={`appearance-none block w-full bg-gray-200 text-gray-700 border ${
-                    editErrors.website ? 'border-red-500' : 'border-gray-200'
-                  } rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500`}
-                  id="edit-website"
-                  name="website"
-                  type="text"
-                  value={editForm.website}
-                  onChange={handleEditChange}
-                  placeholder="e.g. https://www.nike.com"
-                />
-                {renderError('website', editErrors)}
-              </div>
-
-              <div className="mb-6">
-                <label
-                  className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                  htmlFor="edit-country"
-                >
-                  Country
-                </label>
-                <input
-                  className={`appearance-none block w-full bg-gray-200 text-gray-700 border ${
-                    editErrors.country ? 'border-red-500' : 'border-gray-200'
-                  } rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500`}
-                  id="edit-country"
-                  name="country"
-                  type="text"
-                  value={editForm.country}
-                  onChange={handleEditChange}
-                  placeholder="e.g. USA"
-                />
-                {renderError('country', editErrors)}
-              </div>
-
-              <div className="mb-6">
-                <label
-                  className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                  htmlFor="edit-logo"
-                >
-                  Logo
-                </label>
-                <input
-                  className={`appearance-none block w-full bg-gray-200 text-gray-700 border ${
-                    editErrors.logo ? 'border-red-500' : 'border-gray-200'
-                  } rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500`}
-                  id="edit-logo"
-                  name="logo"
-                  type="file"
-                  accept="image/jpeg,image/png,image/jpg,image/gif"
-                  onChange={handleEditChange}
-                  ref={editFileInputRef}
-                />
-                {selectedBrand.logo && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-600">Current Logo:</p>
-        <img       src={`http://localhost:5000/${selectedBrand.logo}`}
- alt="Brand Logo" className="w-24 h-24 object-contain" />                  </div>
-                )}
-                {renderError('logo', editErrors)}
-              </div>
-
-              <div className="flex items-center justify-between">
-                <button
-                  type="submit"
-                  className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
-                    isLoadingForm ? 'opacity-75 cursor-not-allowed' : ''
-                  }`}
-                  disabled={isLoadingForm}
-                >
-                  {isLoadingForm ? (
-                    <span className="flex items-center justify-center">
-                      <svg
-                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Updating...
-                    </span>
-                  ) : (
-                    'Update Brand'
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ml-2"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="flex items-center justify-between">
+              <Button type="primary" htmlType="submit" size="large" loading={isLoadingForm} disabled={isLoadingForm}>
+                {isLoadingForm ? 'Updating...' : 'Update Brand'}
+              </Button>
+              <Button size="large" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 };

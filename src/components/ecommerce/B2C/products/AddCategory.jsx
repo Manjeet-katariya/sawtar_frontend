@@ -312,24 +312,24 @@ const AddCategory = () => {
                   name="name"
                   rules={[{ required: true, message: "Enter category name" }]}
                 >
-                  <Input placeholder="Enter category name" />
+                  <Input placeholder="Enter category name"  size="large" />
                 </Form.Item>
               </Col>
 
               <Col span={12}>
                 <Form.Item label="Meta Title" name="metaTitle">
-                  <Input placeholder="Enter meta title" />
+                  <Input placeholder="Enter meta title"   size="large"/>
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item label="Meta Description" name="metaDescription">
-                  <Input.TextArea placeholder="Enter meta description" />
+                  <Input.TextArea placeholder="Enter meta description"  size="large" />
                 </Form.Item>
               </Col>
               <Col span={24}>
-                <Form.Item label="Meta Keywords" name="metaKeywords">
+                <Form.Item label="Meta Keywords" name="metaKeywords" >
                   <Select
-                    mode="tags"
+                    mode="tags" size="large"
                     style={{ width: "100%" }}
                     placeholder="Type and press Enter to add keywords"
                     tokenSeparators={[","]}

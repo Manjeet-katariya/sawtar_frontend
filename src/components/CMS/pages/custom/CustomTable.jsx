@@ -205,7 +205,7 @@ const CustomTable = ({
                 <th
                   key={column.key}
                   scope="col"
-                  className={`px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                  className={`px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap  tracking-wider ${
                     column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
                   }`}
                   onClick={() => column.sortable && requestSort(column.key)}
