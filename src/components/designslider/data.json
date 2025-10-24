@@ -1,0 +1,119 @@
+[
+  {
+    "name": "Modular Kitchen Designs",
+    
+    "items": [
+      {
+        "title": "Living Room",
+        "desc": "Modern and cozy space.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Bedroom",
+        "desc": "Warm and relaxing area.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Dining",
+        "desc": "Elegant eating space.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Study",
+        "desc": "Focused workspace.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },{
+        "title": "Living Room",
+        "desc": "Modern and cozy space.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Bedroom",
+        "desc": "Warm and relaxing area.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Dining",
+        "desc": "Elegant eating space.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Study",
+        "desc": "Focused workspace.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      }
+    ]
+  },
+  {
+    "name": "Living Room Designs",
+    
+    "items": [
+      {
+        "title": "Balcony",
+        "desc": "Chill vibes outside.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Garden",
+        "desc": "Fresh and green zone.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Facade",
+        "desc": "Stylish front design.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Backyard",
+        "desc": "Space for gatherings.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      }
+      ,{
+        "title": "Living Room",
+        "desc": "Modern and cozy space.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Bedroom",
+        "desc": "Warm and relaxing area.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Dining",
+        "desc": "Elegant eating space.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Study",
+        "desc": "Focused workspace.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      }
+    ]
+  },
+  {
+    "name": "Wardrobe Designs",
+  
+    "items": [
+      {
+        "title": "U-Shaped",
+        "desc": "Efficient storage.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Island Style",
+        "desc": "Modern & functional.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "L-Shaped",
+        "desc": "Classic and compact.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      },
+      {
+        "title": "Parallel",
+        "desc": "Streamlined look.",
+        "img": "https://plus.unsplash.com/premium_photo-1683140882981-490928b33596?fm=jpg&q=60&w=3000"
+      }
+    ]
+  }
+]

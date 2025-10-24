@@ -1,0 +1,65 @@
+   
+   /* linear-gradient(135deg, #D26C44   0%, #8B3F2B  100%) */
+   .zigzag-card:nth-child(odd) {
+      transform: translateY(10%);
+    }
+    .zigzag-card:nth-child(even) {
+      transform: translateY(-10%);
+    }
+
+
+    @keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+.step-indicator{
+clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+
+
+}
+
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 1s ease-out forwards;
+}
+
+.animate-fade-in.delay-100 {
+  animation-delay: 0.3s;
+}

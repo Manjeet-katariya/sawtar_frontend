@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import 'swiper/css';
+@import 'swiper/css/navigation';
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-body: #F7F6F9;
+  --color-btn: #5B3879;
+  --color-hoverbtn: #ba5933;
+  --color-customOrange: #D67A56; /* fixed invalid hex */
+}
