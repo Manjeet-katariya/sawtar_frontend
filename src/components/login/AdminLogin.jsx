@@ -1,4 +1,5 @@
-import React, { useState, useContext, useEffect } from 'react';
+// components/login/AdminLogin.jsx
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Form, Input, Button, Card, Alert, Typography, Spin } from 'antd';
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { motion } from 'framer-motion';
@@ -18,31 +19,47 @@ const StyledContainer = styled.div`
   padding: 2rem;
 `;
 
+// === DYNAMIC DASHBOARD PATH ===
+const getDashboardPath = (roleCode) => {
+  const map = {
+    '0': '/superadmin/',
+    '1': '/admin/',
+  };
+  return `/sawtar/dashboard${map[roleCode] || ''}`;
+};
+
 const AdminLogin = () => {
   const [form] = Form.useForm();
   const [errors, setErrors] = useState({});
   const [attemptCount, setAttemptCount] = useState(0);
+  const hasRedirected = useRef(false); // ← Prevent double navigation
+
   const { user, token, loading, error: authError, login, logout, isAuthenticated } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  // === REDIRECT AFTER SUCCESSFUL LOGIN (ONLY ONCE) ===
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && token && !hasRedirected.current) {
+      hasRedirected.current = true; // ← Mark as done
+
       const roleCode = user?.role?.code;
-      if (roleCode === '0') {
-        toast.success('Login successful! Redirecting to superadmin dashboard...');
-        navigate('/sawtar/cms/superadmin/dashboard');
-      } else if (roleCode === '1') {
-        toast.success('Login successful! Redirecting to admin dashboard...');
-        navigate('/sawtar/cms/admin/dashboard');
+      const path = getDashboardPath(roleCode);
+
+      if (roleCode === '0' || roleCode === '1') {
+        toast.success(`Welcome ${roleCode === '0' ? 'SuperAdmin' : 'Admin'}!`);
+        navigate(path, { replace: true });
       } else {
         setErrors({ general: 'Access denied: Admin privileges required' });
         logout();
+        toast.error('Unauthorized access. Logging out...');
       }
     }
-  }, [isAuthenticated, user, navigate, logout]);
+  }, [isAuthenticated, user, token, navigate, logout]);
 
+  // === HANDLE FORM SUBMISSION ===
   const onFinish = async (values) => {
     setErrors({});
+    hasRedirected.current = false; // Reset redirect flag on new attempt
 
     if (attemptCount >= 5) {
       setErrors({ general: 'Too many attempts. Please try again later.' });
@@ -51,12 +68,14 @@ const AdminLogin = () => {
 
     try {
       const response = await login(values.email, values.password, '/api/auth/login');
+
       if (!response.success) {
-        setAttemptCount((prev) => prev + 1);
+        setAttemptCount(prev => prev + 1);
         const newErrors = {};
-        if (response.errors && Array.isArray(response.errors)) {
-          response.errors.forEach((error) => {
-            newErrors[error.field || 'general'] = error.message;
+
+        if (response.errors?.length) {
+          response.errors.forEach(err => {
+            newErrors[err.field || 'general'] = err.message;
           });
         } else {
           newErrors.general = response.message || 'Login failed';
@@ -64,10 +83,10 @@ const AdminLogin = () => {
         setErrors(newErrors);
       } else {
         setAttemptCount(0);
-        // Navigation handled by useEffect
+        // Navigation handled in useEffect
       }
     } catch (err) {
-      setAttemptCount((prev) => prev + 1);
+      setAttemptCount(prev => prev + 1);
       setErrors({ general: 'An unexpected error occurred. Please try again.' });
     }
   };
@@ -88,9 +107,10 @@ const AdminLogin = () => {
           }}
         >
           <Title level={3} style={{ textAlign: 'center', marginBottom: '24px' }}>
-            Admin Login
+            Admin Portal
           </Title>
 
+          {/* === GENERAL ERROR ALERT === */}
           {(errors.general || authError) && (
             <Alert
               message={errors.general || authError}
@@ -100,6 +120,14 @@ const AdminLogin = () => {
             />
           )}
 
+          {/* === LOADING SPINNER === */}
+          {loading && (
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <Spin size="large" />
+            </div>
+          )}
+
+          {/* === LOGIN FORM === */}
           <Form
             form={form}
             name="admin_login"
@@ -116,7 +144,7 @@ const AdminLogin = () => {
               ]}
             >
               <Input
-                placeholder="Enter your registered email address"
+                placeholder="Enter your registered email"
                 size="large"
               />
             </Form.Item>
@@ -141,14 +169,21 @@ const AdminLogin = () => {
                 Forgot Password?
               </Link>
             </Form.Item>
-               <Form.Item>
-          superadmin: <br />
-          Email:Super1@gmail.com
-                    password:Super1@gmail.com
 
+            {/* === TEST CREDENTIALS (REMOVE IN PRODUCTION) === */}
+            <Form.Item
+              style={{
+                backgroundColor: '#f9f9f9',
+                padding: '12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                marginBottom: '16px',
+              }}
+            >
+              <strong>SuperAdmin:</strong> <br />
+              Email: <code>Super1@gmail.com</code><br />
+              Pass: <code>Super1@gmail.com</code>
             </Form.Item>
-   
-
 
             <Form.Item>
               <Button
@@ -159,9 +194,15 @@ const AdminLogin = () => {
                 loading={loading}
                 disabled={attemptCount >= 5}
               >
-                {loading ? 'Logging in...' : 'Login'}
+                {loading ? 'Logging in...' : 'Login as Admin'}
               </Button>
             </Form.Item>
+
+            <div style={{ textAlign: 'center', marginTop: '16px' }}>
+              <Link href="/sawtar/login" underline="hover">
+                ← Back to User Login
+              </Link>
+            </div>
           </Form>
         </Card>
       </motion.div>

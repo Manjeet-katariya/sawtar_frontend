@@ -1,114 +1,107 @@
-import React, { useEffect, useState } from 'react';
+// components/cms/Sidebar.jsx
+import React from 'react';
 import { useSelector } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useCmsContext } from '../../contexts/CmsContext';
-import NavMenu from '../ui/NavMenu';
 import { FiSettings } from 'react-icons/fi';
 import { getRoleColors } from '../../../../manageApi/utils/roleColors';
 
 const Sidebar = () => {
   const { sidebarOpen, sidebarCollapsed } = useCmsContext();
   const location = useLocation();
-  const user = useSelector((state) => state.auth?.user);
-  const token = useSelector((state) => state.auth?.token);
-  const permissions = useSelector((state) => state.auth?.permissions);
-  const [modules, setModules] = useState([]);
-  
+  const { user, token, permissions } = useSelector((state) => state.auth);
   const colors = getRoleColors(user?.role?.code);
 
-  const isActive = (path) => location.pathname === path;
+  if (!user || !token) return null;
 
-  useEffect(() => {
-    if (permissions && permissions.length > 0) {
-      const availableModules = permissions
-        .filter((p) => p.canView || p.canViewAll)
-        .map((p) => p.moduleId);
-      setModules(availableModules);
-    } else {
-      setModules([]);
-    }
-  }, [permissions]);
-
-  if (!user || !token) {
-    return null;
-  }
-
-  const getNavItems = (availableModules) => {
-    const navItems = [];
-
-    // Always include the Dashboard module
-    const dashboardModule = {
-      moduleId: 'dashboard',
-      name: 'Dashboard',
-      route: user?.role?.code === 0 || user?.role?.code === 1 ? '/sawtar/cms' : '/sawtar/cms/seller/dashboard',
-      icon: 'fas fa-tachometer-alt',
-      subModules: [],
-    };
-
-    // Add Dashboard module to navItems
-    navItems.push({
-      title: dashboardModule.name,
-      icon: dashboardModule.icon,
-      path: dashboardModule.route,
-      isActive: isActive(dashboardModule.route),
-      submenus: dashboardModule.subModules.length > 0
-        ? dashboardModule.subModules
-            .filter((sub) => sub.isActive)
-            .map((sub) => ({
-              title: sub.name,
-              path: sub.route,
-              isActive: isActive(sub.route),
-            }))
-        : undefined,
-    });
-
-    // Add other modules based on permissions
-    availableModules.forEach((module) => {
-      if (module.moduleId === 'dashboard') return;
-
-      const moduleActive = module.subModules.some((sub) => isActive(sub.route)) || isActive(module.route);
-      const submenus = module.subModules
-        .filter((sub) => sub.isActive)
-        .map((sub) => ({
-          title: sub.name,
-          path: sub.route,
-          isActive: isActive(sub.route),
-        }));
-
-      navItems.push({
-        title: module.name,
-        icon: module.icon,
-        path: module.route,
-        isActive: moduleActive,
-        submenus: submenus.length > 0 ? submenus : undefined,
-      });
-    });
-
-    return navItems;
+  const roleSlugMap = {
+    '0': 'superadmin',
+    '1': 'admin',
+    '5': 'vendor-b2c',
+    '6': 'vendor-b2b',
+    '7': 'freelancer',
   };
 
-  const navItems = getNavItems(modules);
+  const roleSlug = roleSlugMap[user.role.code] || 'dashboard';
+  const basePath = `/sawtar/dashboard/${roleSlug}`;
+
+  // === FIXED MENU BUILDING LOGIC ===
+  const navItems = [];
+
+  // Dashboard always first
+  navItems.push({
+    title: 'Dashboard',
+    icon: 'fas fa-tachometer-alt',
+    to: basePath,
+    exact: true
+  });
+
+  // Build menu from permissions
+  Object.entries(permissions || {}).forEach(([permissionKey, permission]) => {
+    if (!permission.canView || !permission.route) return;
+
+    const [moduleName, subModuleName] = permissionKey.split('→');
+    const cleanRoute = permission.route.replace(/^\/+/, '');
+    const fullPath = `${basePath}/${cleanRoute}`;
+
+    // Check if this is a main module or submodule
+    if (!subModuleName) {
+      // Main module
+      navItems.push({
+        title: moduleName,
+        icon: permission.icon || 'fas fa-cube',
+        to: fullPath,
+        submenus: []
+      });
+    } else {
+      // Submodule - find parent module
+      let parentModule = navItems.find(item => item.title === moduleName);
+      if (!parentModule) {
+        // Create parent module if it doesn't exist
+        parentModule = {
+          title: moduleName,
+          icon: permission.icon || 'fas fa-cube',
+          to: null, // Parent might not have its own route
+          submenus: []
+        };
+        navItems.push(parentModule);
+      }
+      
+      // Add submodule
+      parentModule.submenus.push({
+        title: subModuleName,
+        to: fullPath,
+        icon: permission.icon || 'fas fa-circle'
+      });
+    }
+  });
+
+  // Helper to check if a route is active
+  const isActiveRoute = (to, exact = false) => {
+    if (exact) {
+      return location.pathname === to;
+    }
+    return location.pathname.startsWith(to);
+  };
 
   return (
     <aside
       className={`fixed top-0 left-0 z-40 bg-[#1E2B37] shadow-xl flex flex-col h-screen 
-      transition-all duration-300 ease-in-out
-      ${sidebarOpen ? 'w-64' : 'w-20'}
+      transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'}
       ${sidebarCollapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0'}`}
     >
-      {/* Logo/Header */}
+      {/* Header */}
       <div className="h-16 flex items-center px-4 border-b border-gray-700">
         <div className="flex items-center space-x-2">
-          {/* Avatar with gradient based on role */}
-          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colors.gradient} flex items-center justify-center shadow-md`}>
-            <span className="text-white font-bold text-sm">
-              {user.role?.name?.charAt(0).toUpperCase()}
+          <div
+            className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colors.gradient} flex items-center justify-center shadow-lg`}
+          >
+            <span className="text-white font-bold text-lg">
+              {user.role?.name?.[0]}
             </span>
           </div>
-
-          {/* Show role.name */}
           {!sidebarCollapsed && (
-            <span className="text-lg font-semibold text-white">
+            <span className="text-xl font-bold text-white truncate">
               <span className={colors.text}>({user.role?.name})</span>
             </span>
           )}
@@ -116,17 +109,64 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-4 px-2 rounded">
-        <NavMenu collapsed={sidebarCollapsed} items={navItems} />
-      </div>
+      <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-6">
+        {navItems.map((item) => (
+          <div key={item.title} className="space-y-1">
+            {/* Main Module Link */}
+            {item.to && (!item.submenus || item.submenus.length === 0) ? (
+              <NavLink
+                to={item.to}
+                end={item.exact}
+                className={({ isActive }) =>
+                  `flex items-center px-4 py-3 rounded-xl transition-all group 
+                  ${isActive
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`
+                }
+              >
+                <i className={`${item.icon} text-lg mr-3 group-hover:scale-110 transition-transform`} />
+                <span className="font-medium">{item.title}</span>
+              </NavLink>
+            ) : (
+              // Module with submenus or no direct link
+              <div className="space-y-1">
+                <div
+                  className={`flex items-center px-4 py-3 rounded-xl transition-all group 
+                  ${isActiveRoute(item.to || `/${item.title.toLowerCase()}`) 
+                    ? 'text-white bg-gray-800' 
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                >
+                  <i className={`${item.icon} text-lg mr-3`} />
+                  <span className="font-medium">{item.title}</span>
+                </div>
+
+                {/* Submenus */}
+                {item.submenus?.map((sub) => (
+                  <NavLink
+                    key={sub.to}
+                    to={sub.to}
+                    className={({ isActive }) =>
+                      `flex items-center px-4 py-2 rounded-xl transition-all group ml-6 text-sm
+                      ${isActive 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`
+                    }
+                  >
+                    <i className={`${sub.icon} text-xs mr-3`} />
+                    <span>{sub.title}</span>
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-700 bg-[#1E2B37]">
+      <div className="p-4 border-t border-gray-700">
         <div className="flex items-center justify-between">
-          {!sidebarCollapsed && (
-            <div className="text-sm text-gray-300">v2.0.0</div>
-          )}
-          <button className={`p-2 rounded-lg transition-all  duration-200 hover:bg-gray-700 text-white hover:scale-110`}>
+          {!sidebarCollapsed && <div className="text-sm text-gray-300">v2.0.0</div>}
+          <button className="p-2 rounded-lg hover:bg-gray-700 transition-all">
             <FiSettings className="w-5 h-5 text-gray-300" />
           </button>
         </div>

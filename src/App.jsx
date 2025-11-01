@@ -62,18 +62,9 @@ function PrivateRoute({ children, allowedRoles }) {
   const { user, loading } = useSelector((state) => state.auth);
   const location = useLocation();
 
-  if (loading) {
-    return <Loader />;
-  }
-
-  if (!user || !user.role?.code) {
-    return <Navigate to="/sawtar/login" state={{ from: location }} replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user.role.code)) {
-    return <Navigate to="/sawtar" replace />;
-  }
-
+  if (loading) return <Loader />;
+  if (!user || !user.role?.code) return <Navigate to="/sawtar/login" state={{ from: location }} replace />;
+  if (allowedRoles && !allowedRoles.includes(user.role.code)) return <Navigate to="/sawtar" replace />;
   return children;
 }
 
@@ -92,7 +83,7 @@ function LayoutWrapper({ children }) {
     '/sawtar/ecommerce',
     '/sawtar/freelancer/create-business',
     '/sawtar/designs/Tool',
-    '/sawtar/cms',
+    '/sawtar/dashboard',
     '/sawtar/customer/dashboard',
     '/sawtar/admin/login',    '/sawtar/ecommerce/seller','/sawtar/ecommerce/cart'
 
@@ -101,7 +92,7 @@ function LayoutWrapper({ children }) {
   const hideNavbar =
     hideNavbarPaths.includes(location.pathname) ||
     location.pathname.startsWith('/sawtar/ecommerce/product/') ||
-    location.pathname.startsWith('/sawtar/cms/');
+    location.pathname.startsWith('/sawtar/dashboard/');
 
   const showFreelancerNavbar =
     location.pathname === '/sawtar/freelancer/browse-category' ||
@@ -121,7 +112,7 @@ function LayoutWrapper({ children }) {
     '/sawtar/login',
     '/sawtar/quotation',
     '/sawtar/designs/Tool',
-    '/sawtar/cms',
+    '/sawtar/dashboard',
     '/sawtar/customer/dashboard',
     '/sawtar/profile',
     '/sawtar/admin/login',
@@ -131,7 +122,7 @@ function LayoutWrapper({ children }) {
 
   const hideFooter =
     hideFooterPaths.includes(location.pathname) ||
-    location.pathname.startsWith('/sawtar/cms/') ||
+    location.pathname.startsWith('/sawtar/dashboard/') ||
     location.pathname.startsWith('/sawtar/profile/');
 
   const hideQuoteModalPaths = [
@@ -146,7 +137,7 @@ function LayoutWrapper({ children }) {
     '/sawtar/freelancer/business',
     '/sawtar/freelancer/profile',
     '/sawtar/designs/Tool',
-    '/sawtar/cms',
+    '/sawtar/dashboard',
     '/sawtar/customer/dashboard',
     '/sawtar/admin/login',
     '/sawtar/ecommerce/seller',
@@ -155,10 +146,10 @@ function LayoutWrapper({ children }) {
 
   const hideQuoteModal =
     hideQuoteModalPaths.includes(location.pathname) ||
-    location.pathname.startsWith('/sawtar/cms/')||location.pathname.startsWith('/sawtar/ecommerce/product')||location.pathname.startsWith('/sawtar/ecommerce/cart')
+    location.pathname.startsWith('/sawtar/dashboard/')||location.pathname.startsWith('/sawtar/ecommerce/product')||location.pathname.startsWith('/sawtar/ecommerce/cart')
 
   const hideFloatingIconsPaths = [
-    '/sawtar/cms',
+    '/sawtar/dashboard',
     '/sawtar/customer/dashboard',
     '/sawtar/designs/Tool',
     '/sawtar/profile',
@@ -168,7 +159,7 @@ function LayoutWrapper({ children }) {
 
   const hideFloatingIcons =
     hideFloatingIconsPaths.includes(location.pathname) ||
-    location.pathname.startsWith('/sawtar/cms/')||location.pathname.startsWith('/sawtar/ecommerce/product')||location.pathname.startsWith('/sawtar/ecommerce/cart');
+    location.pathname.startsWith('/sawtar/dashboard/')||location.pathname.startsWith('/sawtar/ecommerce/product')||location.pathname.startsWith('/sawtar/ecommerce/cart');
 
   return (
     <div className="min-h-screen relative">
@@ -235,7 +226,7 @@ function App() {
           <Route path="/sawtar/profile" element={<Profile />} />
           <Route path="/sawtar/customer/dashboard" element={<Customerdashboard />} />
           <Route
-            path="/sawtar/cms/*"
+            path="/sawtar/dashboard/*"
             element={
               <PrivateRoute allowedRoles={['0', '1', '2', '3','6','5','8','7']}>
                 <CmsApp />

@@ -1,7 +1,7 @@
 // src/components/Navbar.js
 import React, { useEffect, useState } from 'react';
 import { FaBars, FaTimes } from 'react-icons/fa';
-import { IoMdMail } from 'react-icons/io';
+import { IoMdLogIn, IoMdMail } from 'react-icons/io';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useSelector, useDispatch } from 'react-redux';
@@ -255,7 +255,14 @@ const Navbar = () => {
                   <IoMdMail className="text-sm sm:text-base" />
                   <span>Subscribe</span>
                 </button>
-            {isLoading ? (
+                <button
+                  className="flex items-center gap-1 sm:gap-2 bg-[#D26C44] text-white rounded-md px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm font-medium transition-colors hover:bg-[#c05a38] shadow-sm hover:shadow-md"
+                  onClick={() => navigate('/sawtar/login')}
+                >
+                  <IoMdLogIn className="text-sm sm:text-base" />
+                  <span>Login</span>
+                </button>
+            {/* {isLoading ? (
               <CircularProgress size={24} />
             ) : userData ? (
               <Box sx={{ display: 'flex', alignItems: 'center', textAlign: 'center' }}>
@@ -343,7 +350,7 @@ const Navbar = () => {
                   Login
                 </Button>
               </>
-            )}
+            )} */}
           </div>
         </div>
       </div>
